@@ -1,15 +1,18 @@
 package main
 
 import (
-	"git-backup-bot/git"
-	"git-backup-bot/config"
+	"flag"
 	"github.com/robfig/cron"
 	"time"
-	"flag"
+	"git-backup-bot/config"
+	"git-backup-bot/git"
+	"log"
 )
 
 func main(){
-	configPath := flag.String("config_file", "config.yaml", "Config Path")
+	configPath := flag.String("config", "config.yaml", "Config Path")
+	flag.Parse()
+	log.Println("Service Initiated")
 	configuration := config.LoadConfiguration(*configPath)
 	syncronizer := git.NewGitSyncronizer(*configuration)
 	if len(configuration.CronTime) > 0  {
