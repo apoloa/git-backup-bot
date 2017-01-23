@@ -1,7 +1,7 @@
 package git
 
 import (
-	"go-backup-bot/config"
+	"git-backup-bot/config"
 	"golang.org/x/oauth2"
 	"context"
 	"github.com/google/go-github/github"
@@ -12,26 +12,32 @@ import (
 	"fmt"
 	"errors"
 )
-
+// Main Object to Syncronize the Git.
 type Synchronizer struct {
 	config config.MainConfiguration
 }
 
+// Function than get the correct credentials for SSH
 func (c Synchronizer) credentialsCallback(url string, username string, allowedTypes git.CredType) (git.ErrorCode, *git.Cred) {
 	code, cred := git.NewCredSshKeyFromMemory("git", c.config.GitHub.PublicKey, c.config.GitHub.PrivateKey, c.config.GitHub.PassPhase)
 	return git.ErrorCode(code), &cred
 }
 
+// If the git server don't have a good certificate we need overwrite the function to
+// grant access
 func certificateCheckCallback(_ *git.Certificate, _ bool, _ string) git.ErrorCode {
 	return 0
 }
 
+// Constructor of the Syncronizer
 func NewGitSyncronizer(config config.MainConfiguration) *Synchronizer {
 	return &Synchronizer{
 		config: config,
 	}
 }
 
+// Main function of the syncronizer, loop of all repos registered and fetch the new elementes for the remotes
+// Getting all the branches that exists and create
 func (c *Synchronizer) Sync() {
 	cbs := &git.RemoteCallbacks{
 		CredentialsCallback:      c.credentialsCallback,
@@ -50,7 +56,7 @@ func (c *Synchronizer) Sync() {
 			log.Panic(err)
 		}
 	}
-	for _, repoConfig := range c.getRepositoriesFromGitHub() {
+	for _, repoConfig := range c.getRepositories() {
 		log.Println("Started Sync Repo: " + repoConfig.Name + " url: " + repoConfig.Url)
 		folderRepo := c.getRepoFolder(repoConfig)
 		repo := &git.Repository{}
@@ -97,6 +103,7 @@ func (c *Synchronizer) Sync() {
 	}
 }
 
+// Get the folder using the working directory
 func (c *Synchronizer) getRepoFolder(repo config.RepositoryConfiguration) string {
 	if c.config.WorkingFolder[len(c.config.WorkingFolder) - 1] == '/' {
 		return c.config.WorkingFolder + repo.Name
@@ -105,7 +112,9 @@ func (c *Synchronizer) getRepoFolder(repo config.RepositoryConfiguration) string
 	}
 }
 
-func (c *Synchronizer) getRepositoriesFromGitHub() []config.RepositoryConfiguration {
+// Requesting to Github to get the repositories from Organization and appending the
+// repos registered in the configuration
+func (c *Synchronizer) getRepositories() []config.RepositoryConfiguration {
 	repositories := []config.RepositoryConfiguration{}
 	if len(c.config.Organization) > 0 {
 		ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: c.config.GitHub.AccessToken})
@@ -129,6 +138,7 @@ func (c *Synchronizer) getRepositoriesFromGitHub() []config.RepositoryConfigurat
 	return repositories
 }
 
+// Do the pull because the libgit2 not do that automatic.
 func Pull(repo *git.Repository, fetchOption *git.FetchOptions, branchRefName string) error {
 	// Locate remote
 	remote, err := repo.Remotes.Lookup("origin")
@@ -248,11 +258,13 @@ func Pull(repo *git.Repository, fetchOption *git.FetchOptions, branchRefName str
 	return nil
 }
 
+// Utils function that apply the regExp
 func applyRegExp(a string) string {
 	r, _ := regexp.Compile(`[a-z-A-Z_]+$`)
 	return r.FindString(a)
 }
 
+// Getting the LocalBranch Using the refspec of the remote branch
 func getLocalBranchWithRemoteBranch(repo git.Repository, remoteBranch git.Branch) (*git.Branch) {
 	remoteBranchName, _ := remoteBranch.Name()
 	remoteBranchConvertedName := applyRegExp(remoteBranchName)
@@ -266,6 +278,7 @@ func getLocalBranchWithRemoteBranch(repo git.Repository, remoteBranch git.Branch
 	return nil
 }
 
+// Extract branches to array of branchs from iterator
 func extractBranches(repo git.Repository, branchType git.BranchType) []*git.Branch {
 	branches := []*git.Branch{}
 	branchIterator, _ := repo.NewBranchIterator(branchType)
@@ -277,6 +290,7 @@ func extractBranches(repo git.Repository, branchType git.BranchType) []*git.Bran
 	return branches
 }
 
+// Check if exists branch into branchs
 func checkIfExists(branches []*git.Branch, branchName string) bool {
 	for _, branch := range branches {
 		branchArrName, _ := branch.Name()
@@ -287,6 +301,7 @@ func checkIfExists(branches []*git.Branch, branchName string) bool {
 	return false
 }
 
+// Get all remotes branches and syncronize to the local repository
 func synchronizeBranch(repo *git.Repository) error {
 	log.Println("Extract Local Branches")
 	localBranches := extractBranches(*repo, git.BranchLocal)
@@ -324,6 +339,7 @@ func synchronizeBranch(repo *git.Repository) error {
 	return nil
 }
 
+// Accomplish Cron Interface github.com/robfig/cron
 func (c *Synchronizer) Run() {
 	log.Println(" + Start Sync")
 	c.Sync()
