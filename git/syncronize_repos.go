@@ -61,7 +61,7 @@ func (c *Synchronizer) Sync() {
 		folderRepo := c.getRepoFolder(repoConfig)
 		repo := &git.Repository{}
 		if _, err := os.Stat(folderRepo); os.IsNotExist(err) {
-			log.Println("Repo not backup... ")
+			log.Println("Repo not backup yet... ")
 			repo, err = git.Clone(repoConfig.Url, folderRepo, cloneOptions)
 			if err != nil {
 				log.Panic(err)
