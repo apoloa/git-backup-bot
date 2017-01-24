@@ -70,7 +70,7 @@ func (c *Synchronizer) Sync() {
 			log.Println("Opening Repository... ")
 			repo, _ = git.OpenRepository(folderRepo)
 		}
-		synchronizeBranch(repo)
+		synchronizeBranchs(repo)
 		branchIterator, _ := repo.NewBranchIterator(git.BranchRemote)
 		branch, _, _ := branchIterator.Next()
 		for branch != nil {
@@ -302,7 +302,7 @@ func checkIfExists(branches []*git.Branch, branchName string) bool {
 }
 
 // Get all remotes branches and syncronize to the local repository
-func synchronizeBranch(repo *git.Repository) error {
+func synchronizeBranchs(repo *git.Repository) error {
 	log.Println("Extract Local Branches")
 	localBranches := extractBranches(*repo, git.BranchLocal)
 	branchIterator, err := repo.NewBranchIterator(git.BranchRemote)
