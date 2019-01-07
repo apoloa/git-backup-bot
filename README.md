@@ -1,4 +1,4 @@
-#GIT BACKUP BOT
+# GIT BACKUP BOT
 
 [![codebeat badge](https://codebeat.co/badges/70652f77-798b-4386-9909-118ea4e437c5)](https://codebeat.co/projects/github-com-wholedev-git-backup-bot)
 
